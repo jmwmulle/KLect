@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Lexical Decision Task + IOR</title>
+    <script
+            src="https://code.jquery.com/jquery-3.4.1.min.js"
+            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+            crossorigin="anonymous"></script>
+    <script src="js/jspsych.js"></script>
+    <script src="js/plugins/lexical-ior-keyboard-response.js"></script>
+    <script src="js/plugins/jspsych-survey-text.js"></script>
+    <script src="js/plugins/jspsych-fullscreen.js"></script>
+    <script src="js/plugins/jspsych-instructions.js"></script>
+    <script src="trial_configs/trial_configs.js"></script>
+    <script src="../lib/utilities.js"></script>
+    <script src="../lib/DVA_Manager.js"></script>
+<script src='../lib/KLect.js'></script>
+    <link href="js/css/jspsych.css" rel="stylesheet" type="text/css">
+
+</head>
+<body>
+
+<script>
+    /*          TRIAL GENERATOR
+    * ARGS:
+    *   table: A nested array of trial factors, each corresponding to a single trial.
+    *   test_part: A string indicating which phase of the experiment these trials correspond to.
+    *              i.e., 'practice', 'testing', 'block_1', etc.,
+    *
+    * RETURNS:
+    *   an array of containers, each containing the properties describing a single trial
+    *
+    * */
+    trialsFromTable = function(table, test_part) {
+        let to_return = [];    // to be populated with trial containers
+
+        for (let i = 0; i < table.length; i++) { // iterate row-wise down config table
+            let targ;
+            let cu;
+            let response;
+            let t = `<p class="target">${table[i][5]}</p>`;  // convert target string to html
+
+            // Spawn or otherwise select appropriate stimuli
+            if (table[i][3] === 'Above') {
+                targ = `<div class="box">${t}</div><div class="box dot small"></div><div class="box"></div>`;
+                if (table[i][2] === 'Cued') { cu = top_cue_stim; } else { cu = bottom_cue_stim; }
+            }
+            else {
+
+                targ = `<div class="box"></div><div class="box dot small"></div><div class="box">${t}</div>`;
+                if (table[i][2] === 'Cued') { cu = bottom_cue_stim; } else { cu = top_cue_stim; }
+            }
+
+            // determine correct response for trial
+            if (table[i][4] === 'Nonword') { response = non_word_key; } else { response = real_word_key; };
+
+            to_return.push(
+                {   cue: cu,
+                    cue_back: cue_back_stim,
+                    target: targ,
+                    data: {
+                        test_part: test_part,
+                        trial_num: i,
+                        correct_response: response,
+                        set: table[i][1],
+                        cue_cond: table[i][2],
+                        target_loc: table[i][3],
+                        word_type: table[i][4]
+                    }});
+        }
+        return to_return
+    }
+
+</script>
+
+<script>
+    /* randomize response mapping */
+    var responses = jsPsych.randomization.shuffle(['/', 'z']);
+    var real_word_key = responses[0];
+    var non_word_key = responses[1];
+
+    // DEFINE STIMULI //
+
+    /*
+    * Stimulus sizes are in units of degrees of visual angle (DVA).
+    * This is initially set to an arbitrary # of px, user completes a calibration phase
+    * at run time to determine the true # of px per DVA. This ensures that all stimuli
+    * are perceptually the same size independent of the size of users' displays.
+    * */
+
+    let dva_mgr = new DVAManager();
+    dva_mgr.one_dva = 50;
+
+    /* fixation display */
+    var fixation_stim = '<div class="box"></div><div class="box dot small"></div><div class="box"></div>';
+
+    /* cue displays */
+    var top_cue_stim = '<div class="box exo-cue"></div><div class="box dot small"></div><div class="box"></div>';
+    var bottom_cue_stim = '<div class="box"></div><div class="box dot small"></div><div class="box exo-cue"></div>';
+
+    /* cue back display */
+    var cue_back_stim = '<div class="box"></div><div class="box dot cue-back"></div><div class="box"></div>';
+
+
+    // SPAWN TRIALS //
+
+    /* randomly select trial config */
+    var config_file = Math.floor(Math.random() * 4);
+    var trial_config = trial_configs[config_file];
+
+    /* log which config was used */
+    jsPsych.data.addProperties({ config_file: config_file + 1 });
+
+    /* generate practice trials */
+    var practice_stimuli = trialsFromTable(practice_config, 'practice').slice(0,2);
+    /* generate testing trials */
+    var test_stimuli = trialsFromTable(trial_config, 'test').slice(0,2);
+
+
+    // PREP INSTRUCTIONS (and possibly ethics in the future) //
+
+    /* task instructions */
+    var instructions = '<p>In the following experiment, a real or nonsense word will appear in either the upper or lower box.</p>' +
+        `<p>Press the <span class="key_word">${real_word_key}</span> key if the word is a <span class="key_word">real</span> word.</p>` +
+        `<p>Or, the <span class="key_nonword">${non_word_key}</span> key if the word is a <span class="key_nonword">nonword</span>.</p>` +
+        '<p>Please try to respond as <strong>quickly</strong> and <strong>accurately</strong> as you can.</p>' +
+        '<p>An error tone will play if you make no response, the wrong response, or respond before the target appears.</p>' +
+        '</br><p>The experiment will now begin with a practice round. Press <strong>Next</strong> to start...</p>';
+
+    // DEFINE EVENTS //
+
+    /* welcome screen */
+    var welcome = {
+        type: 'lexical-ior-keyboard-response',
+        stimulus: "Welcome to the experiment. Press any key to begin.",
+        cfg: {one_dva: dva_mgr.one_dva}
+    };
+
+    /* demographic survey */
+    var survey_demog = {
+        type: 'survey-text',
+        questions: [
+            {name: 'age',        prompt: "How old are you?"},
+            {name: 'handedness', prompt: "Are you left or right handed?"},
+            {name: 'gender',     prompt: "What is your gender?"},
+            {name: 'NetID',      prompt: "What is your NetID (i.e., login name for SONA):"}
+        ]
+    };
+
+    /* task instruction */
+    var task_instructions = {
+        type: 'instructions',
+        pages: [instructions],
+        show_clickable_nav: true,
+        post_trial_gap: 2000, // wait 2s after response to proceed
+        on_finish: function() {document.documentElement.style.cursor = 'none';} // hide cursor once practice phase begins
+    };
+
+    /* pre-practice screen */
+    var practice_splash = {
+        type: 'lexical-ior-keyboard-response',
+        stimulus: "Press any key to begin the practice phase.",
+        cfg: {one_dva: dva_mgr.one_dva}
+    };
+
+    /* pre-testing screen */
+    var testing_splash = {
+        type: 'lexical-ior-keyboard-response',
+        stimulus: "Practice complete. Press any key to begin the testing phase.",
+        cfg: {one_dva: dva_mgr.one_dva}
+    };
+
+    /* fixation: 1500ms */
+    var fixation_event = {
+        type: 'lexical-ior-keyboard-response',
+        choices: jsPsych.NO_KEYS,
+        stimulus: fixation_stim,
+        cfg: {one_dva: dva_mgr.one_dva},
+        trial_duration: 1500,
+        data: {trial_event: "fixation"},
+    };
+
+    /* cue: 200ms duration */
+    var cue_event = {
+        type: 'lexical-ior-keyboard-response',
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 200,
+        stimulus: jsPsych.timelineVariable('cue'),
+        cfg: {one_dva: dva_mgr.one_dva},
+        data: jsPsych.timelineVariable('data'),
+        on_finish: function(data) { data.trial_event = 'cue'; }
+    };
+
+    /* cue to cue-back SOA: 200ms */
+    var cue_to_cue_back_SOA = {
+        type: 'lexical-ior-keyboard-response',
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 200,
+        stimulus: fixation_stim,
+        cfg: {one_dva: dva_mgr.one_dva},
+        data: {trial_event: "cue_to_cue-back_SOA"}
+    }
+
+    /* cue back: 200ms duration */
+    var cue_back_event = {
+        type: 'lexical-ior-keyboard-response',
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 200,
+        stimulus: jsPsych.timelineVariable('cue_back'),
+        cfg: {one_dva: dva_mgr.one_dva},
+        data: jsPsych.timelineVariable('data'),
+        on_finish: function(data) { data.trial_event = 'cue-back'; }
+    };
+
+    /* cue-back to target SOA: 200ms */
+    var cue_back_to_target_SOA = {
+        type: 'lexical-ior-keyboard-response',
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 200,
+        stimulus: fixation_stim,
+        cfg: {one_dva: dva_mgr.one_dva},
+        data: {trial_event: "cue-back_to_target_SOA"}
+    }
+
+    /* target: until response, 2000ms timeout, 1500ms inter-trial interval */
+    var target_event = {
+        type: 'lexical-ior-keyboard-response',
+        choices: ['z', '/'],
+        trial_duration: 2000,
+        post_trial_gap: 1500,
+        stimulus: jsPsych.timelineVariable('target'),
+        cfg: {one_dva: dva_mgr.one_dva},
+        data: jsPsych.timelineVariable('data'),
+        on_finish: function(data) {
+            data.trial_event = 'target';
+            data.correct = data.key_press == jsPsych.pluginAPI.convertKeyCharacterToKeyCode(data.correct_response);
+            data.timeout = data.rt == null;
+            if (!data.correct) { audio.play(); }
+        }
+    };
+
+    var goodbye = {
+        type: 'lexical-ior-keyboard-response',
+        stimulus:   `<p>You have completed the experiment!</p>` +
+                    `<p>If you have any questions about what you just did, feel free to contact the researcher.</p>` +
+                    `<p>Thank you for your time, press any key to quit the program!</p>`,
+        choices: jsPsych.ALL_KEYS,
+        cfg: {one_dva: dva_mgr.one_dva}
+    };
+
+    // DEFINE EVENT PROCEDURE //
+
+    var trial_timeline = [
+        fixation_event,         // 1500ms
+        cue_event,              // 200ms
+        cue_to_cue_back_SOA,    // 200ms
+        cue_back_event,         // 200ms
+        cue_back_to_target_SOA, // 200ms
+        target_event            // Until response or 2000ms timeout, 1500ms inter-trial interval
+    ];
+
+    /* practice trials */
+    var practice_procedure = {
+        timeline: trial_timeline,
+        timeline_variables: practice_stimuli,
+        repetitions: 1,
+        randomize_order: true
+    };
+
+    /* testing trials */
+    var test_procedure = {
+        timeline: trial_timeline,
+        timeline_variables: test_stimuli,
+        repetitions: 1,
+        randomize_order: true
+     };
+
+
+    // DEFINE & ESTABLISH TIMELINE //
+
+    let fullscreen = {type:'fullscreen', fullscreen_mode: true}
+    /* experiment event sequence */
+    timeline = [
+        fullscreen,
+        welcome,
+        survey_demog,
+        task_instructions,
+        practice_splash,
+        practice_procedure,
+        testing_splash,
+        test_procedure,
+        goodbye
+    ];
+
+    var audio = new Audio('aud/error_beep.mp3');
+
+    dva_mgr.launch = function() {
+        jsPsych.init({
+            timeline: timeline,
+            on_finish: function() {
+
+	            document.documentElement.style.cursor = 'pointer';
+                // TODO: (maybe) filter out redundant (non-target) events prior to writing
+                // TODO: log user interaction data
+                KLect.send('klein', 'kelsey_macdonald', 'lexicaldecision_ior', 'kelsmac94@gmail.com', '../..');
+                jsPsych.data.get().localSave('CSV', "lexical_IOR_data.csv");
+                //jsPsych.data.displayData();
+            }
+        });
+    };
+
+    dva_mgr.init(true);
+
+</script>
+</body>
+</html>

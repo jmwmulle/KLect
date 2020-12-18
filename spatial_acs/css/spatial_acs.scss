@@ -1,0 +1,224 @@
+$one-dva: 200px;
+// the following numbers were just yanked from the klibs original, see Brett for deets
+$test-area-width: 3.72 * $one-dva;
+$test-area-height: $test-area-width;
+$stim-size: 0.5 * 1.24 * $one-dva;
+//$stim-size: 0.5* $one-dva;
+$border-color: rgb(100, 100, 100);
+$border-width: 0.07 * $one-dva;
+$border-style: $border-width solid $border-color;
+$body-bg-color: rgb(20,20,20);
+// entire $demographics element removed by JS before experiment begins
+#demographics {
+  width: 800px;
+  height: auto;
+  padding: 100px 0;
+  background-color: white;
+  color: #212121;
+  margin: 100px auto;
+  text-align: center;
+  border-radius: 16px;
+  border: 1px solid black;
+
+
+  .input-wrapper {
+    width: 100%;
+    margin-bottom: 2em;
+  }
+
+  label {
+    display: block;
+    /*text-align: left;*/
+  }
+
+  .hidden {
+    display: none
+  }
+
+  #demographics-submit {
+    background-color: rgb(45, 45, 52);
+    color: white;
+    border-radius: 4px;
+    border: 1px solid black;
+    width: 100px;
+    padding: 10px;
+    margin: 4em auto 0 auto;
+    cursor: pointer;
+  }
+
+  #demographics-warning {
+    color: red;
+  }
+
+  #demographics-submit:hover {
+
+    background-color: rgb(175, 175, 190);
+  }
+
+  p.note {
+    font-weight: 100;
+    font-size: .75em;
+    line-height: 1em;
+    width: 400px;
+    margin: 10px auto 2em auto;
+    text-align: left;
+  }
+
+  select {
+    width: 150px;
+  }
+}
+
+
+body {
+  background-color: $body-bg-color;
+  font-family: sans-serif;
+  color: white
+}
+
+@mixin box {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+* {
+  @include box;
+}
+
+#wrapper {
+  display: grid;
+  grid-template-columns: [left] $test-area-width/3 [enter] $test-area-width/3 [right] $test-area-width/3;
+  grid-template-rows: [top] $test-area-height/3 [middle] $test-area-height/3 [bottom] $test-area-height/3;
+  grid-template-areas: ". top ." "left center right" ". bottom .";
+  align-items: center;
+  justify-items: center;
+
+  #top {
+    grid-area: top;
+  }
+
+  #left {
+    grid-area: left;
+  }
+
+  #right {
+    grid-area: right;
+  }
+
+  #center {
+    grid-area: center;
+  }
+
+  #bottom {
+    grid-area: bottom;
+  }
+
+  .box {
+    //@keyframes zero-to-eight {
+    //  0% {
+    //    border: none
+    //  }
+    //  99% { border: none}
+    //  100% {
+    //    border: $border-width $border-color solid;
+    //
+    //  }
+    //}
+    //@keyframes eight-to-two {
+    //  0% {
+    //    border: none
+    //  }
+    //  99% { border: none}
+    //  100% {
+    //    border: $border-width $border-color solid;
+    //
+    //  }
+    //}
+    @include box;
+    width: $test-area-height/3;
+    height: $test-area-height/3;
+    box-sizing: border-box;
+    padding: $border-width;
+    margin: 0;
+    display: grid;
+    grid-template-colums: auto;
+    grid-template-rows: [top] 50% [bottom] 50%;
+    align-items: center;
+    justify-items: center;
+
+    .digit {
+      width: $stim-size;
+      height: $stim-size;
+      display: block;
+      border: $border-width $border-color solid;
+
+      &.lower {
+        transform: translateY(-0.07* $one-dva);
+        position: relative;
+        z-index:1;
+      }
+      &.upper {
+        background-color:  $body-bg-color;
+        height: $stim-size - 0.07* $one-dva;
+        position: relative;
+        z-index:2;
+      }
+
+
+    }
+
+    &.zero {
+      .upper, .lower {
+        border: none
+      }
+    }
+
+
+    &.two {
+      .lower {
+        border-right: none;
+      }
+
+      .upper {
+        border-left: none;
+      }
+    }
+
+    &.five {
+      .lower {
+        border-left: none;
+      }
+
+      .upper {
+        border-right: none;
+      }
+    }
+
+    .lower {
+      border-top: none
+    }
+
+    &.bright {
+      .digit {
+        border-color: white
+      }
+    }
+
+    //&.demo {
+    //  &.zero-to-eight {
+    //    .upper, .lower {
+    //      animation-name: zero-to-eight;
+    //      animation-duration: 2s;
+    //    }
+    //  }
+    //  &.eight-to-two {
+    //    .upper, .lower {
+    //      animation-name: eight-to-two;
+    //    }
+    //  }
+    //}
+  }
+
+
+}
